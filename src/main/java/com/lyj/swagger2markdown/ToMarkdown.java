@@ -2,54 +2,71 @@ package com.lyj.swagger2markdown;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.lyj.swagger2markdown.config.SwaggerToMdAutoConfiguration;
 import com.lyj.swagger2markdown.model.ModelAttr;
 import com.lyj.swagger2markdown.model.Request;
 import com.lyj.swagger2markdown.model.Table;
+import com.lyj.swagger2markdown.param.URLParam;
 import com.lyj.swagger2markdown.service.ProcessService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import springfox.documentation.service.Documentation;
+import springfox.documentation.spring.web.DocumentationCache;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
-@Component
 public class ToMarkdown implements ApplicationRunner {
-
-    String host="localhost";
+    private String host="localhost";
 
     @Value("${server.port}")
-    int port;
+    private int port;
 
-    @Value("${spring.application.name}")
-    String swaggerGroupName;
+    @Autowired
+    DocumentationCache documentationCache;
 
     @Autowired
     ProcessService processService;
 
+    //入口
     //服务启动完成后，开始生成md文件
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        try {
-            swaggerToMarkdown();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        swaggerToMarkdown(URLParam.url);
     }
 
-    //入口
-    public void swaggerToMarkdown() throws IOException {
-        //http://127.0.0.1:8800/v2/api-docs?group=geely-rvdc-measure-service
-        String url=String.format("http://%s:%d/v2/api-docs?group=%s",host,port,swaggerGroupName);
+    public void swaggerToMarkdown(String[] urls) throws IOException {
 
-        //拿到swagger所有数据
-        Map<String, Object> map = processService.tableList(url);
+        StringBuilder sb=new StringBuilder();
 
-        //解析生成markdown
-        StringBuilder sb = buildMarkdown(map);
+        //如果url为空，则使用默认的
+        if(urls==null || urls.length==0){
+            //http://127.0.0.1:8800/v2/api-docs
+            Map<String, Documentation> documentationMap = documentationCache.all();
+            if(documentationMap.size()==0){
+                //使用默认
+                String url=String.format("http://%s:%d/v2/api-docs",host,port);
+                buildMarkdown(url,sb);
+            }else{
+                Iterator<String> iterator = documentationMap.keySet().iterator();
+                while(iterator.hasNext()){
+                    String key = iterator.next();
+                    Documentation documentation = documentationMap.get(key);
+                    String groupName = documentation.getGroupName();
+                    //http://localhost:8800/v2/api-docs?group=geely-rvdc-measure-service
+                    String url=String.format("http://%s:%d/v2/api-docs?group=%s",host,port,groupName);
+                    buildMarkdown(url,sb);
+                }
+            }
+        }else{
+            for(int i=0;i<urls.length;i++){
+                buildMarkdown(urls[i],sb);
+            }
+        }
 
         //生成文本
         FileWriter fileWriter = new FileWriter("API.md");
@@ -57,9 +74,19 @@ public class ToMarkdown implements ApplicationRunner {
         fileWriter.close();
     }
 
-    private StringBuilder buildMarkdown(Map<String, Object> map) {
-        Map controllerMap = (Map) map.get("tableMap");
-        StringBuilder sb = new StringBuilder();
+    private StringBuilder buildMarkdown(String url,StringBuilder sb){
+        //拿到swagger所有数据
+        Map controllerMap = (Map) processService.tableList(url).get("tableMap");
+        if(controllerMap==null) {
+            System.out.println("请检查Swagger地址："+url+",没有数据！");
+            return sb;
+        }
+        //解析生成markdown
+        return buildMarkdown(sb,controllerMap);
+    }
+
+    private StringBuilder buildMarkdown(StringBuilder sb,Map<String, Object> controllerMap) {
+
         Iterator iterator = controllerMap.keySet().iterator();
         while(iterator.hasNext()){
             ArrayList<Table> method = (ArrayList<Table>) controllerMap.get(iterator.next());

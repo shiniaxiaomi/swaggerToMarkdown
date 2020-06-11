@@ -8,6 +8,7 @@ import com.lyj.swagger2markdown.model.Table;
 import com.lyj.swagger2markdown.utils.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
@@ -17,7 +18,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service
+@Component
 public class ProcessService {
 
     @Autowired
