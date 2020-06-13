@@ -12,6 +12,6 @@ import java.lang.annotation.*;
 @Import({SwaggerToMdAutoConfiguration.class, URLParam.class})
 public @interface EnableSwaggerToMD {
 
-    String[] url() default "";
+    String[] url() default {};
 
 }
