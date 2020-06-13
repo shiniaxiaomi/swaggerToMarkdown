@@ -8,11 +8,11 @@ import com.lyj.swagger2markdown.model.Request;
 import com.lyj.swagger2markdown.model.Table;
 import com.lyj.swagger2markdown.param.URLParam;
 import com.lyj.swagger2markdown.service.ProcessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.stereotype.Component;
 import springfox.documentation.service.Documentation;
 import springfox.documentation.spring.web.DocumentationCache;
 
@@ -20,6 +20,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
+@Slf4j
 public class ToMarkdown implements ApplicationRunner {
     private String host="localhost";
 
@@ -35,8 +36,12 @@ public class ToMarkdown implements ApplicationRunner {
     //入口
     //服务启动完成后，开始生成md文件
     @Override
-    public void run(ApplicationArguments args) throws Exception {
-        swaggerToMarkdown(URLParam.url);
+    public void run(ApplicationArguments args) {
+        try {
+            swaggerToMarkdown(URLParam.url);
+        } catch (IOException e) {
+            log.error("生成文档异常：",e);
+        }
     }
 
     public void swaggerToMarkdown(String[] urls) throws IOException {
@@ -78,7 +83,7 @@ public class ToMarkdown implements ApplicationRunner {
         //拿到swagger所有数据
         Map controllerMap = (Map) processService.tableList(url).get("tableMap");
         if(controllerMap==null) {
-            System.out.println("请检查Swagger地址："+url+",没有数据！");
+            log.error("请检查Swagger地址："+url+",没有数据！");
             return sb;
         }
         //解析生成markdown
@@ -132,7 +137,7 @@ public class ToMarkdown implements ApplicationRunner {
             try{
                 param = JSON.parse(s);
             }catch (Exception e){
-                System.out.println(e);
+                log.error("生成文档异常：",e);
             }
 
         }
